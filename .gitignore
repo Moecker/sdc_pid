@@ -1,0 +1,7 @@
+.vscode
+build
+tags
+.editorconfig
+/src/uWebSockets-0.13.0
+/_build_vs
+/_build_make
