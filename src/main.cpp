@@ -1,14 +1,9 @@
 #include <math.h>
-#include <string>
-/// TODO Undelete
 //#include <uWS/uWS.h>
+#include <uWS.h>
 #include <iostream>
 #include "PID.h"
 #include "json.hpp"
-
-/// TODO Delete
-#include "uWS/uWS.h"
-
 
 // for convenience
 using json = nlohmann::json;
@@ -16,7 +11,7 @@ using json = nlohmann::json;
 // For converting back and forth between radians and degrees.
 constexpr double pi()
 {
-    return M_PI;
+    return 3.14159265359;
 }
 double deg2rad(double x)
 {
@@ -51,36 +46,35 @@ int main()
     uWS::Hub hub;
 
     PID pid;
+    const auto p = 0.2;
+    const auto i = 3.0;
+    const auto d = 0.004;
 
-    // TODO: Initialize the pid variable.
-    pid.Init(1, 0.1, 0.01);
+    pid.Init(p, i, d);
 
-    hub.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char* data, size_t length, uWS::OpCode opCode) {
+    hub.onMessage([&pid](uWS::WebSocket<uWS::SERVER> web_socket, char* data, size_t length, uWS::OpCode op_code) {
         // "42" at the start of the message means there's a websocket message event.
         // The 4 signifies a websocket message
         // The 2 signifies a websocket event
         if (length && length > 2 && data[0] == '4' && data[1] == '2')
         {
-            auto s = hasData(std::string(data));
+            auto s = hasData(std::string(data).substr(0, length));
             if (s != "")
             {
-                auto j = json::parse(s);
-                std::string event = j[0].get<std::string>();
+                auto json_data = json::parse(s);
+                std::string event = json_data[0].get<std::string>();
                 if (event == "telemetry")
                 {
-                    // j[1] is the data JSON object
-                    double cte = std::stod(j[1]["cte"].get<std::string>());
-                    double speed = std::stod(j[1]["speed"].get<std::string>());
-                    double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-                    double steer_value;
-                    /*
-                     * TODO: Calcuate steering value here, remember the steering value is
-                     * [-1, 1].
-                     * NOTE: Feel free to play around with the throttle and speed. Maybe use
-                     * another PID controller to control the speed!
-                     */
+                    // json_data[1] is the data JSON object
+                    double cte = std::stod(json_data[1]["cte"].get<std::string>());
+                    double speed = std::stod(json_data[1]["speed"].get<std::string>());
+                    double angle = std::stod(json_data[1]["steering_angle"].get<std::string>());
 
-                    // DEBUG
+                    // Calculate steering value here, remember the steering value is [-1, 1].
+                    double steer_value =
+                        -pid.tau_p_ * pid.p_error_ - pid.tau_d_ * pid.d_error_ - pid.tau_i_ * pid.i_error_;
+
+                    // Debug output
                     std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 
                     json msgJson;
@@ -88,38 +82,39 @@ int main()
                     msgJson["throttle"] = 0.3;
                     auto msg = "42[\"steer\"," + msgJson.dump() + "]";
                     std::cout << msg << std::endl;
-                    ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+                    web_socket.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
                 }
             }
             else
             {
                 // Manual driving
-                std::string msg = "42[\"manual\",{}]";
-                ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+                std::string message = "42[\"manual\",{}]";
+                web_socket.send(message.data(), message.length(), uWS::OpCode::TEXT);
             }
         }
     });
 
     // We don't need this since we're not using HTTP but if it's removed the program
     // doesn't compile :-(
-    hub.onHttpRequest([](uWS::HttpResponse* res, uWS::HttpRequest req, char* data, size_t, size_t) {
+    hub.onHttpRequest([](uWS::HttpResponse* response, uWS::HttpRequest request, char* data, size_t, size_t) {
         const std::string s = "<h1>Hello world!</h1>";
-        if (req.getUrl().valueLength == 1)
+        if (request.getUrl().valueLength == 1)
         {
-            res->end(s.data(), s.length());
+            response->end(s.data(), s.length());
         }
         else
         {
             // i guess this should be done more gracefully?
-            res->end(nullptr, 0);
+            response->end(nullptr, 0);
         }
     });
 
     hub.onConnection(
         [&hub](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) { std::cout << "Connected!!!" << std::endl; });
 
-    hub.onDisconnection([&hub](uWS::WebSocket<uWS::SERVER> ws, int code, char* message, size_t length) {
-        ws.close();
+    hub.onDisconnection([&hub](uWS::WebSocket<uWS::SERVER> web_socket, int code, char* message, size_t length) {
+        web_socket.close();
         std::cout << "Disconnected" << std::endl;
     });
 
@@ -134,4 +129,59 @@ int main()
         return -1;
     }
     hub.run();
+}
+
+double Run()
+{
+    return 0.1;
+}
+
+PID Twiddle(double tolerance = 0.2, int max_iterations = 100)
+{
+    PID pid;
+
+    std::vector<double> taus = {0.0, 0.0, 0.0};
+    std::vector<double> errors = {1.0, 1.0, 1.0};
+
+    // Somehow run the program here
+    auto best_cte = Run();
+    auto iteration = 0;
+    while (pid.TotalError() > tolerance)
+    {
+        std::cout << "Iteration " << iteration << ":  Best error = " << best_cte;
+        for (int i = 0; i < taus.size(); ++i)
+        {
+            taus[i] += errors[i];
+
+            auto cte = Run();
+            pid.UpdateError(cte);
+
+            if (cte < best_cte)
+            {
+                best_cte = cte;
+                errors[i] *= 1.1;
+            }
+            else
+            {
+                taus[i] -= 2 * errors[i];
+
+                auto cte = Run();
+                pid.UpdateError(cte);
+
+                if (cte < best_cte)
+                {
+
+                    best_cte = cte;
+                    errors[i] *= 1.1;
+                }
+                else
+                {
+                    taus[i] += errors[i];
+                    errors[i] *= 0.9;
+                }
+            }
+        }
+    }
+    iteration += 1;
+    return pid;
 }
