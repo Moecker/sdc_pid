@@ -1,6 +1,5 @@
 #include <math.h>
-//#include <uWS/uWS.h>
-#include <uWS.h>
+#include <uWS/uWS.h>
 #include <iostream>
 #include "PID.h"
 #include "json.hpp"
@@ -41,14 +40,71 @@ std::string hasData(std::string s)
     return "";
 }
 
+
+double Run(double cte)
+{
+    return cte;
+}
+
+
+PID Twiddle(double current_cte, double tolerance = 0.2, int max_iterations = 1)
+{
+    PID pid;
+
+    std::vector<double> taus = {0.0, 0.0, 0.0};
+    std::vector<double> errors = {1.0, 1.0, 1.0};
+
+    // Somehow run the program here
+    auto best_cte = Run(current_cte);
+    auto iteration = 0;
+    while (pid.TotalError() > tolerance)
+    {
+        std::cout << "Iteration " << iteration << ":  Best error = " << best_cte;
+        for (int i = 0; i < taus.size(); ++i)
+        {
+            taus[i] += errors[i];
+
+            auto cte = Run(current_cte);
+            pid.UpdateError(cte);
+
+            if (cte < best_cte)
+            {
+                best_cte = cte;
+                errors[i] *= 1.1;
+            }
+            else
+            {
+                taus[i] -= 2 * errors[i];
+
+                auto cte = Run(current_cte);
+                pid.UpdateError(cte);
+
+                if (cte < best_cte)
+                {
+
+                    best_cte = cte;
+                    errors[i] *= 1.1;
+                }
+                else
+                {
+                    taus[i] += errors[i];
+                    errors[i] *= 0.9;
+                }
+            }
+        }
+    }
+    iteration += 1;
+    return pid;
+}
+
 int main()
 {
     uWS::Hub hub;
 
     PID pid;
-    const auto p = 0.2;
-    const auto i = 3.0;
-    const auto d = 0.004;
+    const auto p = 0.1;
+    const auto i = 0.0009;
+    const auto d = 0.75;
 
     pid.Init(p, i, d);
 
@@ -75,15 +131,18 @@ int main()
                         -pid.tau_p_ * pid.p_error_ - pid.tau_d_ * pid.d_error_ - pid.tau_i_ * pid.i_error_;
 
                     // Debug output
-                    std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+                    std::cout << "CTE: " << cte << "Speed: " << speed << "Angle: " << angle << " Steering Value: " << steer_value << std::endl;
 
                     json msgJson;
                     msgJson["steering_angle"] = steer_value;
                     msgJson["throttle"] = 0.3;
                     auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-                    std::cout << msg << std::endl;
 
                     web_socket.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+                    pid.UpdateError(cte);
+
+                    // pid = Twiddle(cte);
                 }
             }
             else
@@ -111,7 +170,7 @@ int main()
     });
 
     hub.onConnection(
-        [&hub](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) { std::cout << "Connected!!!" << std::endl; });
+        [&hub, &pid](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) { pid.UpdateError(0.0); std::cout << "Connected!!!" << std::endl; });
 
     hub.onDisconnection([&hub](uWS::WebSocket<uWS::SERVER> web_socket, int code, char* message, size_t length) {
         web_socket.close();
@@ -129,59 +188,4 @@ int main()
         return -1;
     }
     hub.run();
-}
-
-double Run()
-{
-    return 0.1;
-}
-
-PID Twiddle(double tolerance = 0.2, int max_iterations = 100)
-{
-    PID pid;
-
-    std::vector<double> taus = {0.0, 0.0, 0.0};
-    std::vector<double> errors = {1.0, 1.0, 1.0};
-
-    // Somehow run the program here
-    auto best_cte = Run();
-    auto iteration = 0;
-    while (pid.TotalError() > tolerance)
-    {
-        std::cout << "Iteration " << iteration << ":  Best error = " << best_cte;
-        for (int i = 0; i < taus.size(); ++i)
-        {
-            taus[i] += errors[i];
-
-            auto cte = Run();
-            pid.UpdateError(cte);
-
-            if (cte < best_cte)
-            {
-                best_cte = cte;
-                errors[i] *= 1.1;
-            }
-            else
-            {
-                taus[i] -= 2 * errors[i];
-
-                auto cte = Run();
-                pid.UpdateError(cte);
-
-                if (cte < best_cte)
-                {
-
-                    best_cte = cte;
-                    errors[i] *= 1.1;
-                }
-                else
-                {
-                    taus[i] += errors[i];
-                    errors[i] *= 0.9;
-                }
-            }
-        }
-    }
-    iteration += 1;
-    return pid;
 }
