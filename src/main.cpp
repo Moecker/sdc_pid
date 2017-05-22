@@ -102,9 +102,9 @@ int main()
     uWS::Hub hub;
 
     PID pid;
-    const auto p = 0.1;
-    const auto i = 0.0009;
-    const auto d = 0.75;
+    const auto p = 0.085;
+    const auto i = 0.00085;
+    const auto d = 0.85;
 
     pid.Init(p, i, d);
 
@@ -131,17 +131,16 @@ int main()
                         -pid.tau_p_ * pid.p_error_ - pid.tau_d_ * pid.d_error_ - pid.tau_i_ * pid.i_error_;
 
                     // Debug output
-                    std::cout << "CTE: " << cte << "Speed: " << speed << "Angle: " << angle << " Steering Value: " << steer_value << std::endl;
+                    std::cout << "CTE: " << cte << " | Speed: " << speed << " | Angle: " << angle << " | Steering Value: " << steer_value << std::endl;
 
                     json msgJson;
                     msgJson["steering_angle"] = steer_value;
-                    msgJson["throttle"] = 0.3;
+                    msgJson["throttle"] = 0.25;
                     auto msg = "42[\"steer\"," + msgJson.dump() + "]";
 
                     web_socket.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
                     pid.UpdateError(cte);
-
                     // pid = Twiddle(cte);
                 }
             }
