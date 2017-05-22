@@ -40,13 +40,13 @@ std::string hasData(std::string s)
     return "";
 }
 
-
+/// @brief  Dummy method for Twiddle algorithm
 double Run(double cte)
 {
     return cte;
 }
 
-
+/// @brief  Twiddle algo for (theoretically) finding best PID control parameters
 PID Twiddle(double current_cte, double tolerance = 0.2, int max_iterations = 1)
 {
     PID pid;
@@ -102,10 +102,40 @@ int main()
     uWS::Hub hub;
 
     PID pid;
+    /// @brief  The P (Proportional) part of the PID Controler
+    ///         As the name suggets, this part controls an output (here: steering angle)
+    ///         proportional to the error accounted for. The error is the CTE, which can be
+    ///         seen as the deviation of the current vehicle's position to the ideal center
+    ///         of the road. As the deviation increases, also the steering angle increases.
+    ///         Drawback is that this part alone will result in a wavy vehicle control,
+    ///         though it will bring the vehicle back to the center reliable.
     const auto p = 0.085;
+
+    /// @brief  The I (Integral) part of the PID Controler
+    ///         This part influences the control as such that a systematic deviation between
+    ///         the ideal center and the current vehicle's position won't survive too long.
+    ///         It accumulates the CTE error over time and its influence increases with
+    ///         higher accumulated error; hence it kind of integrates the area under the error
+    ///         curve. Alone this conroller part does not really control the vehicle reasonably, it
+    ///         however works out nicely in combination with the two others.
     const auto i = 0.00085;
+
+    /// @brief  The D (Derivative) part of the PID Controler
+    ///         The derivative part is proportional to the amount of change in CTE. Whenever
+    ///         the vehicle deviates quickly from the center line, it kicks in and increases
+    ///         the vehicle's control to gain back to the center. In addition it increases
+    ///         attack time of a solely P-Contoler and bring the vehicle faster to its desired
+    ///         path. In the simulation, this part was crucial for tight curves as the CTE
+    ///         does increase quite quickly here.
     const auto d = 0.85;
 
+    /// The choice of parameters was eventually done experimentally.
+    /// A version of the Twiddle algorithm has been implemented but not used, as it seemed
+    /// more sophisticated work to make the Twiddle algorithm work with the simulator.
+    /// In the lectures a vehicle model was in place so Twiddle could directly be used.
+    /// In the simulator however we would need a way to actually see live changes of slight
+    /// changes in the PID paramaters set choice, which was not easily doable from my point
+    /// of view. However, also a manual choice finally resulted in reasonable achievements.
     pid.Init(p, i, d);
 
     hub.onMessage([&pid](uWS::WebSocket<uWS::SERVER> web_socket, char* data, size_t length, uWS::OpCode op_code) {
