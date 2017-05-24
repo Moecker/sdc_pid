@@ -7,3 +7,7 @@ tags
 /_build_make
 /src/openssl
 /src/uWS
+CMakeLists.txt.user
+PID Project Linux desktop Universal.x86
+PID Project Linux desktop Universal.x86_64
+PID Project Linux desktop Universal_Data/

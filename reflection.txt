@@ -1,0 +1,53 @@
+This file targets the reflection questions in the project rubric:
+
+(a) Student describes the effect of the P, I, D component of the PID algorithm in their implementation.
+    Is it what you expected?
+
+    /// @brief  The P (Proportional) part of the PID Controler
+    ///         As the name suggets, this part controls an output (here: steering angle)
+    ///         proportional to the error accounted for. The error is the CTE, which can be
+    ///         seen as the deviation of the current vehicle's position to the ideal center
+    ///         of the road. As the deviation increases, also the steering angle increases.
+    ///         Drawback is that this part alone will result in a wavy vehicle control,
+    ///         though it will bring the vehicle back to the center reliable.
+
+    /// @brief  The I (Integral) part of the PID Controler
+    ///         This part influences the control as such that a systematic deviation between
+    ///         the ideal center and the current vehicle's position won't survive too long.
+    ///         It accumulates the CTE error over time and its influence increases with
+    ///         higher accumulated error; hence it kind of integrates the area under the error
+    ///         curve. Alone this conroller part does not really control the vehicle reasonably, it
+    ///         however works out nicely in combination with the two others.
+
+    /// @brief  The D (Derivative) part of the PID Controler
+    ///         The derivative part is proportional to the amount of change in CTE. Whenever
+    ///         the vehicle deviates quickly from the center line, it kicks in and increases
+    ///         the vehicle's control to gain back to the center. In addition it increases
+    ///         attack time of a solely P-Contoler and bring the vehicle faster to its desired
+    ///         path. In the simulation, this part was crucial for tight curves as the CTE
+    ///         does increase quite quickly here.
+
+    During the process of tuning those parameters each influcence could be observed.
+    It was of great value to know the effect of each controler part as this closed the
+    feedback loop in adjusting parameters.
+    For instance, first attempts set the P-part to a way too high value which lead to
+    a very wavy steering of the car or even self-accelearting controler amplitude.
+    A decent D-part could in particular countermeasure peaks in the car's steering.
+    The I-part which was choosen at the end concluded the controller configuration and
+    removed the systematic bias of driving not in the center of the lane.
+
+(b) Visual aids are encouraged, i.e. record of a small video of the car in the simulator and describe 
+    what each component is set to.
+
+    Please see the GIFs attached in the results/ folder.
+
+(c) Student discusses how they chose the final hyperparameters (P, I, D coefficients).
+    This could be have been done through manual tuning, twiddle, SGD, or something else, or a combination!
+
+    /// The choice of parameters was eventually done experimentally.
+    /// A version of the Twiddle algorithm has been implemented but not used, as it seemed
+    /// more sophisticated work to make the Twiddle algorithm work with the simulator.
+    /// In the lectures a vehicle model was in place so Twiddle could directly be used.
+    /// In the simulator however we would need a way to actually see live changes of slight
+    /// changes in the PID paramaters set choice, which was not easily doable from my point
+    /// of view. However, also a manual choice finally resulted in reasonable achievements.
