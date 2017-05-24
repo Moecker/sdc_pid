@@ -26,5 +26,5 @@ void PID::UpdateError(double cte)
 
 double PID::TotalError()
 {
-    return -tau_p_ * p_error  - tau_d_ * d_error  - tau_i_* i_error;
+    return -tau_p_ * p_error_  - tau_d_ * d_error_  - tau_i_* i_error_;
 }
